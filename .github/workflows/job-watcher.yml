@@ -1,0 +1,41 @@
+name: Job Watcher - 3x Daily
+
+on:
+  schedule:
+    - cron: '0 8 * * *'    # 8 AM UTC
+    - cron: '0 13 * * *'   # 1 PM UTC
+    - cron: '0 18 * * *'   # 6 PM UTC
+  workflow_dispatch:
+
+jobs:
+  watch-jobs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4 pandas lxml
+      
+      - name: Run job scraper
+        run: python scripts/scraper.py
+      
+      - name: Commit changes
+        run: |
+          git config user.name "Job Watcher Bot"
+          git config user.email "job-watcher@bot.local"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "[Job Watcher] Updated job listings - $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+            git push
+          fi
